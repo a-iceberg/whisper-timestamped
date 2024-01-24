@@ -1,1 +1,2 @@
-whisper-timestamped==1.14.4
+setuptools-rust==1.8.1
+tiktoken==0.5.2

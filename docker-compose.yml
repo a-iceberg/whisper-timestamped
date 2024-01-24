@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  whisper-timestamped:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whisper-timestamped
+    restart: unless-stopped
+    volumes:
+      - /home/alex/data/data_2/:/app/input
+      - ./output:/app/output
+      - ./cache:/app/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0']
+            capabilities: [gpu]
