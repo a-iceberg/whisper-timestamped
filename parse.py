@@ -7,6 +7,10 @@ def convert_json_to_text():
 
     # Read json files from ./output folder
     for filename in sorted(os.listdir("output")):
+        # Skip non-json files
+        if not 'json' in filename:
+            print(f"Skipping {filename}")
+            continue
         print(f"Reading {filename}")
         with open(f"output/{filename}") as file:
             data.append(json.load(file))

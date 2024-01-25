@@ -27,9 +27,14 @@ def main():
 
     # Iterate files in data
     for filename in sorted(os.listdir("input")):
-        print(f"Transcribing {filename}")
+        # Skip non-wav files
+        if not 'wav' in filename:
+            print(f"Skipping {filename}")
+            continue
+        print(f"Transcribing {filename}: {'wav' in filename}")
 
         audio_path = f"input/{filename}"
+
         audio = whisper.load_audio(audio_path)
         start_time = time.time()
         result = whisper.transcribe(model, audio, vad=True, language="ru")
