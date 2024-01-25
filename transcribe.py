@@ -11,7 +11,7 @@ from parse import convert_json_to_text
 
 
 logging.basicConfig(
-    filename="logs.log",
+    filename="/app/cache/logs.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     filemode="w",

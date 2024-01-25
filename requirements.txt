@@ -1,3 +1,4 @@
 setuptools-rust==1.8.1
 tiktoken==0.5.2
 pandas==2.2.0
+pyarrow==15.0.0
