@@ -8,10 +8,11 @@ services:
     container_name: whisper-timestamped
     restart: unless-stopped
     volumes:
-      - /home/vlad/data/test_data/:/app/input
+      - /home/alex/data/data_2/:/app/input
     # - ./input/:/app/input
       - ./output:/app/output
       - ./cache:/app/cache
+      - ./logs:/app/logs
     deploy:
       resources:
         reservations:
