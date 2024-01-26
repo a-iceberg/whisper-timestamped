@@ -43,46 +43,60 @@ def main():
 
     # Iterate files in data
     for filename in sorted(os.listdir("input")):
-        # Skip non-wav files
-        if not "wav" in filename:
-            logger.warning(f"Skipping {filename}")
-            continue
-
         audio_path = f"input/{filename}"
         audio = whisper.load_audio(audio_path)
 
         try:
             start_time = time.time()
-            result = whisper.transcribe(model, audio, vad=True, language="ru")
+            result = whisper.transcribe(
+                model,
+                audio,
+                vad="audiotok",
+                language="ru",
+                remove_empty_words=True,
+                beam_size=5,
+                best_of=5,
+                temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            )
             duration_transcript = time.time() - start_time
 
             with open(f"output/{filename}.json", "w") as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
-
-            duration_audio = get_audio_duration(audio_path)
-            performance_ratio = duration_transcript / duration_audio
-            performance_ratios.append(performance_ratio)
-
-            results.append(
-                {
-                    "filename": filename,
-                    "duration_audio": duration_audio,
-                    "duration_transcript": duration_transcript,
-                    "performance_ratio": performance_ratio,
-                }
-            )
         except Exception as e:
             logger.error(f"{e}")
             continue
 
-    median_performance_ratio = median(performance_ratios)
-    logger.info(f"Median Performance Ratio: {median_performance_ratio}")
+        # Skip non-wav files
+        if not "wav" in filename:
+            logger.warning(f"Skipping {filename}")
+            continue
 
-    # Save results to DataFrame and export to CSV
-    df = pd.DataFrame(results)
-    df.to_csv("/app/output/performance_results.csv", index=False)
+        duration_audio = get_audio_duration(audio_path)
+        performance_ratio = duration_transcript / duration_audio
+        performance_ratios.append(performance_ratio)
+
+        results.append(
+            {
+                "filename": filename,
+                "duration_audio": duration_audio,
+                "duration_transcript": duration_transcript,
+                "performance_ratio": performance_ratio,
+            }
+        )
 
     convert_json_to_text()
+
+    try:
+        median_performance_ratio = median(performance_ratios)
+        logger.info(f"Median Performance Ratio: {median_performance_ratio}")
+
+        # Save results to DataFrame and export to CSV
+        df = pd.DataFrame(results)
+        df.to_csv("/app/output/performance_results.csv", index=False)
+    except Exception as ex:
+        logger.warning(
+            f"Performance ratio wasn't calculated, wav files are missing. Error: {ex}"
+        )
 
 
 if __name__ == "__main__":
