@@ -1,14 +1,19 @@
-import whisper_timestamped as whisper
-import json
 import os
 import time
 import wave
+import json
 import logging
+from uuid import uuid4
+from typing import List
+from statistics import median
+
 import torch
 import pandas as pd
-from statistics import median
-from parse import convert_json_to_text
+import whisper_timestamped as whisper
+from fastapi import FastAPI, UploadFile
+from fastapi.responses import HTMLResponse
 
+app = FastAPI()
 
 logging.basicConfig(
     filename="/app/logs/logs.log",
@@ -28,30 +33,29 @@ def get_audio_duration(wav_filename):
         return duration
 
 
-def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Using device: {device}")
-
-    try:
-        model = whisper.load_model("large-v3", device=device, download_root="./cache")
-        logger.info("Model loaded successfully")
-    except Exception as exc:
-        raise exc
-
-    performance_ratios = []
+async def transcribe_audio(files: List[UploadFile], request_type: str):
     results = []
+    performance_ratios = []
 
-    # Iterate files in data
-    for filename in sorted(os.listdir("input")):
-        audio_path = f"input/{filename}"
-        audio = whisper.load_audio(audio_path)
+    for file in files:
+        # Checking and saving the file
+        if not file.filename.endswith(".wav"):
+            continue
 
+        filename = f"{uuid4()}.wav"
+        file_path = os.path.join(os.path.dirname(__file__), "input", filename)
+
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+
+        # Processing the audio
         try:
             start_time = time.time()
+            audio = whisper.load_audio(file_path)
             result = whisper.transcribe(
                 model,
                 audio,
-                vad="audiotok",
+                vad="auditok",
                 language="ru",
                 remove_empty_words=True,
                 beam_size=5,
@@ -60,44 +64,79 @@ def main():
             )
             duration_transcript = time.time() - start_time
 
-            with open(f"output/{filename}.json", "w") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
+            with open(f"/app/output/{filename}.json", "w") as json_file:
+                json.dump(result, json_file, indent=2, ensure_ascii=False)
         except Exception as e:
-            logger.error(f"{e}")
+            logger.error(f"Error in processing file {file.filename}: {e}")
             continue
 
-        # Skip non-wav files
-        if not "wav" in filename:
-            logger.warning(f"Skipping {filename}")
-            continue
-
-        duration_audio = get_audio_duration(audio_path)
+        # Statistic generation
+        duration_audio = get_audio_duration(file_path)
         performance_ratio = duration_transcript / duration_audio
         performance_ratios.append(performance_ratio)
 
         results.append(
             {
-                "filename": filename,
+                "filename": file.filename,
                 "duration_audio": duration_audio,
                 "duration_transcript": duration_transcript,
                 "performance_ratio": performance_ratio,
+                "request_type": request_type,
             }
         )
 
-    convert_json_to_text()
+        # Deleting a file to save space on the server
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-    try:
-        median_performance_ratio = median(performance_ratios)
-        logger.info(f"Median Performance Ratio: {median_performance_ratio}")
+    median_performance_ratio = median(performance_ratios)
+    logger.info(f"Median Performance Ratio: {median_performance_ratio}")
 
-        # Save results to DataFrame and export to CSV
-        df = pd.DataFrame(results)
-        df.to_csv("/app/output/performance_results.csv", index=False)
-    except Exception as ex:
-        logger.warning(
-            f"Performance ratio wasn't calculated, wav files are missing. Error: {ex}"
-        )
+    # Saving the results in CSV
+    df = pd.DataFrame(results)
+    df.to_csv("/app/output/performance_results.csv", index=False)
+
+    return median_performance_ratio
 
 
-if __name__ == "__main__":
-    main()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger.info(f"Using device: {device}")
+
+try:
+    model = whisper.load_model("large-v3", device=device, download_root="./cache")
+    logger.info("Model loaded successfully")
+except Exception as exc:
+    raise exc
+
+
+@app.get("/health")
+async def health():
+    return {"status": "OK"}
+
+
+@app.get("/")
+async def main():
+    # HTML-form for testing in a web browser
+    html_content = """
+            <body>
+            <form action="/transcribe/single" enctype="multipart/form-data" method="post">
+            <input name="files" type="file" multiple>
+            <input type="submit">
+            </form>
+            </body>
+            """
+    return HTMLResponse(content=html_content)
+
+
+@app.post("/transcribe/single")
+async def transcribe_audio_single(files: List[UploadFile]):
+    # Endpoint for single processing
+    median_performance_ratio = await transcribe_audio(files, "single")
+    return {"median_performance_ratio": median_performance_ratio}
+
+
+@app.post("/transcribe/parallel")
+async def transcribe_audio_parallel(files: List[UploadFile]):
+    # Endpoint for parallel processing
+    median_performance_ratio = await transcribe_audio(files, "parallel")
+    return {"median_performance_ratio": median_performance_ratio}
