@@ -60,7 +60,7 @@ class Server:
         with open(file_path, "rb") as audio_file:
             response = requests.post(
                 self.gpu_url,
-                files={"file": (os.path.basename(file_path), audio_file, "audio/wav")},
+                files={"file": (original_file_name, audio_file, "audio/wav")},
             )
 
         if response.status_code == 200:
@@ -78,7 +78,7 @@ class Server:
                 sentences[i]["end"],
                 side,
                 transcribation_date,
-                str(sentences[i]["conf"]),
+                str(sentences[i]["confidence"]),
                 original_file_name,
                 rec_date,
                 src,
@@ -89,7 +89,7 @@ class Server:
             )
 
         phrases = [sentences[i]["text"] for i in range(len(sentences))]
-        confidences = [sentences[i]["conf"] for i in range(len(sentences))]
+        confidences = [sentences[i]["confidence"] for i in range(len(sentences))]
 
         return len(sentences), phrases, confidences
 
