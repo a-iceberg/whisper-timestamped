@@ -2,16 +2,17 @@ import argparse
 import os
 import requests
 
-def upload_file(file_path: str, use_parallel: bool):
+
+def upload_file(file_path: str):
     if not os.path.isfile(file_path):
         print("The file does not exist.")
         return
-    
-    url = "http://localhost:8000/transcribe/parallel" if use_parallel else "http://localhost:8000/transcribe/single"
-    files = {'files': (os.path.basename(file_path), open(file_path, 'rb'), 'audio/wav')}
-    
+
+    url = "http://localhost:8000/transcribe"
+    file = {"file": (os.path.basename(file_path), open(file_path, "rb"), "audio/wav")}
+
     try:
-        response = requests.post(url, files=files)
+        response = requests.post(url, files=file)
         response.raise_for_status()
         print("Response:", response.json())
     except requests.exceptions.HTTPError as err:
@@ -21,10 +22,12 @@ def upload_file(file_path: str, use_parallel: bool):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Upload an audio file to the FastAPI server for transcription.")
-    parser.add_argument('--file', type=str, required=True, help='File path of the audio file')
-    parser.add_argument('--parallel', action='store_true', help='Use parallel transcription endpoint')
-    
+    parser = argparse.ArgumentParser(
+        description="Upload an audio file to the FastAPI server for transcription."
+    )
+    parser.add_argument(
+        "--file", type=str, required=True, help="File path of the audio file"
+    )
+
     args = parser.parse_args()
-    
-    upload_file(args.file, args.parallel)
+    upload_file(args.file)
