@@ -8,7 +8,7 @@ def upload_file(file_path: str):
         print("The file does not exist.")
         return
 
-    url = "http://localhost:8000/transcribe"
+    url = "http://localhost:8080/transcribe"
     file = {"file": (os.path.basename(file_path), open(file_path, "rb"), "audio/wav")}
 
     try:
