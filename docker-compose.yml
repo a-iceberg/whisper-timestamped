@@ -4,7 +4,7 @@ services:
   whisper-timestamped:
     container_name: whisper-timestamped
     ports:
-      - "8080:8080"
+      - "8888:8888"
     restart: unless-stopped
     build:
       context: .
@@ -20,4 +20,4 @@ services:
           - driver: nvidia
             device_ids: ['0']
             capabilities: [gpu]
-    command: ["gunicorn", "transcribe:app", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8080", "--timeout", "600"]
+    command: ["gunicorn", "transcribe:app", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8888", "--timeout", "600"]

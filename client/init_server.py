@@ -7,7 +7,7 @@ import logging
 class Server:
     def __init__(self):
         self.gpu_url = os.environ.get(
-            "WHISPER_SERVER_DEFAULT", "http://localhost:8080/transcribe"
+            "WHISPER_SERVER_DEFAULT", "http://localhost:8888/transcribe"
         )
         # self.temp_file_path = ""
         # self.temp_file_name = ""
