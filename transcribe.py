@@ -69,9 +69,10 @@ async def transcribe_audio(file: UploadFile):
         result = whisper.transcribe(
             model,
             audio,
-            vad="auditok",
+            vad="silero",
             language="ru",
             remove_empty_words=True,
+            initial_prompt="Оценивай как разговор мастера сервисного центра с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке.",
             beam_size=5,
             best_of=5,
             temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
