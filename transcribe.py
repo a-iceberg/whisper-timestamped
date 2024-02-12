@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import torch
 import whisper_timestamped as whisper
-from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi import FastAPI, UploadFile, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
 app = FastAPI()
@@ -47,7 +47,7 @@ async def main():
 
 
 @app.post("/transcribe")
-async def transcribe_audio(file: UploadFile):
+async def transcribe_audio(file: UploadFile, source_id: int = Form(0)):
     if not file.file:
         raise HTTPException(status_code=400, detail="No file provided")
 
@@ -66,13 +66,17 @@ async def transcribe_audio(file: UploadFile):
     # Processing the audio
     try:
         audio = whisper.load_audio(file_path)
+        if source_id:
+            prompt = "Оценивай как разговор мастера сервисного центра по ремонту бытовой техники с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке."
+        else:
+            prompt = "Оценивай как разговор оператора сервисного центра по ремонту бытовой техники с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке."
         result = whisper.transcribe(
             model,
             audio,
             vad="silero",
             language="ru",
             remove_empty_words=True,
-            initial_prompt="Оценивай как разговор мастера сервисного центра с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке.",
+            initial_prompt=prompt,
             beam_size=5,
             best_of=5,
             temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
