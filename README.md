@@ -1,5 +1,6 @@
 ## Whisper timestamped
 ASR microservice developed for [call center transcription service](https://github.com/format37/call_centre_stt_server/tree/master)
+
 Based on [whisper-timestamped](https://github.com/linto-ai/whisper-timestamped)
 
 ---
