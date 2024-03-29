@@ -9,9 +9,6 @@ class Server:
         self.gpu_url = os.environ.get(
             "WHISPER_SERVER_DEFAULT", "http://10.2.5.212:8888/transcribe"
         )
-        # self.temp_file_path = ""
-        # self.temp_file_name = ""
-
         logging.basicConfig(level=logging.INFO)
 
     def accept_feature_extractor(self, sentences, accept):
@@ -43,14 +40,8 @@ class Server:
         queue_date="31.01.2024",
         transcribation_date="31.01.2024",
     ):
-        # logger_text = " size: " + str(file_size)
-        # logger_text += " file: " + self.temp_file_path + self.temp_file_name
-
-        # logging.info(logger_text)
 
         sentences = []
-
-        # file_path = self.temp_file_path + self.temp_file_name
 
         file_path = original_file_name
         with open(file_path, "rb") as audio_file:
