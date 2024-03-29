@@ -1,4 +1,5 @@
 import os
+import gc
 import logging
 from uuid import uuid4
 
@@ -19,6 +20,10 @@ logger = logging.getLogger()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {device}")
+
+model = None
+gc.collect()
+torch.cuda.empty_cache()
 
 try:
     model = whisper.load_model("large-v3", device=device, download_root="./cache")
@@ -47,7 +52,7 @@ async def main():
 
 
 @app.post("/transcribe")
-async def transcribe_audio(file: UploadFile, source_id: int = Form(0)):
+async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str = Form("silero")):
     if not file.file:
         raise HTTPException(status_code=400, detail="No file provided")
 
@@ -73,7 +78,7 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0)):
         result = whisper.transcribe(
             model,
             audio,
-            vad="silero",
+            vad=vad,
             language="ru",
             remove_empty_words=True,
             initial_prompt=prompt,
