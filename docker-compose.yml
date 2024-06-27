@@ -4,14 +4,13 @@ services:
   whisper-timestamped:
     container_name: whisper-timestamped
     ports:
-      - "8000:8000"
+      - "8888:8888"
     restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
       - ./input/:/app/input
-      - ./output:/app/output
       - ./cache:/app/cache
       - ./logs:/app/logs
     deploy:
@@ -21,4 +20,4 @@ services:
           - driver: nvidia
             device_ids: ['0']
             capabilities: [gpu]
-    command: ["gunicorn", "transcribe:app", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "240"]
+    command: ["gunicorn", "transcribe:app", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8888", "--timeout", "1800"]
