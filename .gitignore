@@ -164,3 +164,4 @@ cython_debug/
 **.wav
 **.mp3
 **.m4a
+**.pass
