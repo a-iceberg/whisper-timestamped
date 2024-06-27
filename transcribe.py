@@ -1,14 +1,14 @@
-import whisper_timestamped as whisper
-import json
 import os
-import time
-import wave
+import gc
 import logging
-import torch
-import pandas as pd
-from statistics import median
-from parse import convert_json_to_text
+from uuid import uuid4
 
+import torch
+import whisper_timestamped as whisper
+from fastapi import FastAPI, UploadFile, Form, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+
+app = FastAPI()
 
 logging.basicConfig(
     filename="/app/logs/logs.log",
@@ -18,86 +18,80 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger.info(f"Using device: {device}")
 
-def get_audio_duration(wav_filename):
-    # Calculate the duration of an audio file
-    with wave.open(wav_filename, "r") as wav_file:
-        frames = wav_file.getnframes()
-        rate = wav_file.getframerate()
-        duration = frames / float(rate)
-        return duration
+model = None
+gc.collect()
+torch.cuda.empty_cache()
+
+try:
+    model = whisper.load_model("large-v3", device=device, download_root="./cache")
+    logger.info("Model loaded successfully")
+except Exception as exc:
+    raise exc
 
 
-def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"Using device: {device}")
+@app.get("/health")
+async def health():
+    return {"status": "OK"}
 
-    try:
-        model = whisper.load_model("large-v3", device=device, download_root="./cache")
-        logger.info("Model loaded successfully")
-    except Exception as exc:
-        raise exc
 
-    performance_ratios = []
-    results = []
+@app.get("/")
+async def main():
+    # HTML-form for testing in a web browser
+    html_content = """
+            <body>
+            <form action="/transcribe" enctype="multipart/form-data" method="post">
+            <input name="file" type="file">
+            <input type="submit">
+            </form>
+            </body>
+            """
+    return HTMLResponse(content=html_content)
 
-    # Iterate files in data
-    for filename in sorted(os.listdir("input")):
-        audio_path = f"input/{filename}"
-        audio = whisper.load_audio(audio_path)
 
-        try:
-            start_time = time.time()
-            result = whisper.transcribe(
-                model,
-                audio,
-                vad="audiotok",
-                language="ru",
-                remove_empty_words=True,
-                beam_size=5,
-                best_of=5,
-                temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
-            )
-            duration_transcript = time.time() - start_time
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str = Form("silero")):
+    if not file.file:
+        raise HTTPException(status_code=400, detail="No file provided")
 
-            with open(f"output/{filename}.json", "w") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.error(f"{e}")
-            continue
-
-        # Skip non-wav files
-        if not "wav" in filename:
-            logger.warning(f"Skipping {filename}")
-            continue
-
-        duration_audio = get_audio_duration(audio_path)
-        performance_ratio = duration_transcript / duration_audio
-        performance_ratios.append(performance_ratio)
-
-        results.append(
-            {
-                "filename": filename,
-                "duration_audio": duration_audio,
-                "duration_transcript": duration_transcript,
-                "performance_ratio": performance_ratio,
-            }
+    if "." not in file.filename:
+        raise HTTPException(
+            status_code=400, detail="No file extension found. Check file name"
         )
 
-    convert_json_to_text()
+    file_ext = file.filename.rsplit(".", maxsplit=1)[1]
+    filename = f"{uuid4()}.{file_ext}"
+    file_path = os.path.join(os.path.dirname(__file__), "input", filename)
 
+    with open(file_path, "wb") as file_object:
+        file_object.write(await file.read())
+
+    # Processing the audio
     try:
-        median_performance_ratio = median(performance_ratios)
-        logger.info(f"Median Performance Ratio: {median_performance_ratio}")
-
-        # Save results to DataFrame and export to CSV
-        df = pd.DataFrame(results)
-        df.to_csv("/app/output/performance_results.csv", index=False)
-    except Exception as ex:
-        logger.warning(
-            f"Performance ratio wasn't calculated, wav files are missing. Error: {ex}"
+        audio = whisper.load_audio(file_path)
+        if source_id:
+            prompt = "Оценивай как разговор мастера сервисного центра по ремонту бытовой техники с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке."
+        else:
+            prompt = "Оценивай как разговор оператора сервисного центра по ремонту бытовой техники с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке."
+        result = whisper.transcribe(
+            model,
+            audio,
+            vad=vad,
+            language="ru",
+            remove_empty_words=True,
+            initial_prompt=prompt,
+            beam_size=5,
+            best_of=5,
+            temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
         )
+    except Exception as e:
+        logger.error(f"Error in processing file {file.filename}: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
+    # Deleting a file to save space on the server
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
-if __name__ == "__main__":
-    main()
+    return JSONResponse(content=result)
