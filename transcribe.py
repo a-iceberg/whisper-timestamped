@@ -81,6 +81,7 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
             vad=vad,
             language="ru",
             remove_empty_words=True,
+            detect_disfluencies=True,
             initial_prompt=prompt,
             beam_size=5,
             best_of=5,
