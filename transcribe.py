@@ -89,7 +89,7 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
         )
     except Exception as e:
         logger.error(f"Error in processing file {file.filename}: {e}")
-        return JSONResponse(status_code=500, content={"Error"})
+        return JSONResponse(status_code=500, content={"Error": str(e)})
 
     # Deleting a file to save space on the server
     if os.path.exists(file_path):
