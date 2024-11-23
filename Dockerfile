@@ -4,7 +4,10 @@ WORKDIR /app
 
 COPY requirements.txt /app/
 
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/list/*
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y python3.9-dev portaudio19-dev git \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip3 install \
     git+https://github.com/linto-ai/whisper-timestamped.git#egg=whisper-timestamped[dev,vad_silero,vad_auditok,test] \
     -r requirements.txt
