@@ -1,7 +1,7 @@
-setuptools-rust==1.8.1
-tiktoken==0.5.2
-fastapi==0.110.1
-python-multipart==0.0.7
-uvicorn==0.27.0
-gunicorn==22.0.0
+setuptools-rust==1.10.2
+tiktoken==0.8.0
+fastapi==0.115.5
+python-multipart==0.0.19
+uvicorn==0.31.1
+gunicorn==23.0.0
 auditok==0.2.0
