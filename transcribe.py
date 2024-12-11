@@ -84,8 +84,8 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
             detect_disfluencies=True,
             initial_prompt=prompt,
             beam_size=5,
-            best_of=5,
-            temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            best_of=4,
+            temperature=(0.0, 0.2, 0.4, 0.6, 0.8),
         )
     except Exception as e:
         logger.error(f"Error in processing file {file.filename}: {e}")
