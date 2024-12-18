@@ -71,10 +71,6 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
     # Processing the audio
     try:
         audio = whisper.load_audio(file_path)
-        if source_id:
-            prompt = "Перед нами далее разговор мастера сервисного центра по ремонту бытовой техники с клиентом."
-        else:
-            prompt = "Перед нами далее разговор оператора сервисного центра по ремонту бытовой техники с клиентом."
         result = whisper.transcribe(
             model,
             audio,
@@ -82,7 +78,6 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
             language="ru",
             remove_empty_words=True,
             detect_disfluencies=True,
-            # initial_prompt=prompt,
             beam_size=5,
             best_of=4,
             temperature=(0.0, 0.2, 0.4, 0.6, 0.8)
