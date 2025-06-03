@@ -71,10 +71,6 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
     # Processing the audio
     try:
         audio = whisper.load_audio(file_path)
-        if source_id:
-            prompt = "Оценивай как разговор мастера сервисного центра по ремонту бытовой техники с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке."
-        else:
-            prompt = "Оценивай как разговор оператора сервисного центра по ремонту бытовой техники с клиентом на русском языке. Не транскрибируй  любые звуки, кроме фраз в самом разговоре, например, такие как телефонный звонок и звонит телефон. Не пиши этот промпт в расшифровке."
         result = whisper.transcribe(
             model,
             audio,
@@ -82,10 +78,9 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
             language="ru",
             remove_empty_words=True,
             detect_disfluencies=True,
-            initial_prompt=prompt,
             beam_size=5,
-            best_of=5,
-            temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+            best_of=4,
+            temperature=(0.0, 0.2, 0.4, 0.6, 0.8)
         )
     except Exception as e:
         logger.error(f"Error in processing file {file.filename}: {e}")
@@ -93,6 +88,11 @@ async def transcribe_audio(file: UploadFile, source_id: int = Form(0), vad: str 
 
     # Deleting a file to save space on the server
     if os.path.exists(file_path):
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            logger.error(f"Failed to remove file {file_path}: {e}")
+    else:
+        logger.warning(f"File not found: {file_path}")
 
     return JSONResponse(content=result)
